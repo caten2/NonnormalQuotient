@@ -162,7 +162,7 @@ class GroupQuoitent:
             layout_choice (str): The layout format for the graph.
         """
 
-        g = Graph(self.matrix)
+        g = Graph(self.matrix())
         g.remove_loops()
         g.plot(graph_border=True, layout=layout_choice).save(filename=name)
 
@@ -208,11 +208,11 @@ def subgroup_data(group):
         lis of dict: Dictionaries of information about each subgroup of `group`.
 
     Keys:
-        subgroup number - The place the subgroup has in the ordering SageMath assigns to the subgroups of the given group
-        subgroup generators - A list of generators for the subgroup
-        subgroup normal - True if the subgroup is normal in the given group, Falso otherwise
-        quotient group chirality - Left if left cosets were used in the quotient, right otherwise
-        quotient group order - The number of elements in the resulting quotient
+        subgroup number - The place the subgroup has in the ordering SageMath assigns to the subgroups of the given group.
+        subgroup generators - A list of generators for the subgroup.
+        subgroup normal - True if the subgroup is normal in the given group, Falso otherwise.
+        quotient group chirality - Left if left cosets were used in the quotient, right otherwise.
+        quotient group order - The number of elements in the resulting quotient.
     """
 
     lis = []
@@ -235,27 +235,38 @@ def generate_subgroup_table(group, file_name):
 
     Args:
         group (sage.groups.perm_gps): The group in question.
+    
+    # Fix linebreaks here
     """
 
     lis = subgroup_data(group)
-    print("\\begin{tabular}{r | *{4}{c|}}")
-    print("subgroup \# & generators & normal? & quotient chirality & quotient order \\\\ \\hline")
+    file = open(file_name, 'w')
+    file.write('\\begin{tabular}{r | *{4}{c|}}')
+    file.write('subgroup # & generators & normal? & quotient chirality & quotient order \\\\ \\hline')
     for dic in lis:
-        print("%d & %s & %s & %s & %d \\\\ \\cline{2-5}"%(dic['subgroup number'],dic['subgroup generators'],dic['subgroup normal'],dic['quotient group chirality'],dic['quotient group order']))
-    print("\end{tabular}")
+        file.write('{} & {} & {} & {} & {} \\\\ \\cline{{2-5}}'.format(dic['subgroup number'],dic['subgroup generators'],dic['subgroup normal'],dic['quotient group chirality'],dic['quotient group order']))
+    file.write('\end{tabular}')
 
 def normal_closure(group, subgrp_num):
     """
     Return a list of the elements in the normal closure of the given subgroup.
+
+    Args:
+        group (sage.groups.perm_gps): The group in question.
+        subgrou_num (int): The place the subgroup has in the ordering SageMath assigns to the subgroups of the given group.
+
+    Returns:
+        dict of 
     """
-    subgrp = set(list(group.subgroups()[subgrp_num]))
-    closure = {}
+
+    subgrp = frozenset(group.subgroups()[subgrp_num])
+    closure = set()
     for i in range(len(list(group.normal_subgroups()))):
-        if subgrp.intersection(set(list(group.normal_subgroups()[i]))) == subgrp:
-            if closure == {}:
-                closure = set(list(group.normal_subgroups()[i]))
+        if subgrp.intersection(frozenset(group.normal_subgroups()[i])) == subgrp:
+            if closure == set():
+                closure = set(list(group.frozensetnormal_subgroups()[i]))
             else:
-                closure = closure.intersection(set(list(group.normal_subgroups()[i])))
+                closure = closure.intersection(set(group.normal_subgroups()[i]))
     return closure
 
 def normal_closure_test(group):
