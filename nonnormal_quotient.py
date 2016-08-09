@@ -8,7 +8,7 @@ import sage.all
 from sage.matrix.constructor import matrix
 from sage.graphs.graph import Graph
 
-class GroupQuoitent:
+class GroupQuotient:
     """
     A quotient object constructed from a group and one of its (possibly nonnormal) subgroups.
     Either left- or right-handed cosets can be used in the construction.
@@ -17,9 +17,10 @@ class GroupQuoitent:
         group (sage.groups.perm_gps): The initial group used in the construction.
         elems (frozenset): The elements of the initial group.
         subgroup (sage.groups.perm_gps): The chosen subgroup of the initial group.
-        cosets (list): The cosets of the chosen subgroup in the initial group.
-        comps (list): The components of the relation graph for the relation encoded in `matrix`.
-        verbose_comps (list): The same as `comps` but the elements of each entry are group elements rather than indices.
+        cosets (tuple): The cosets of the chosen subgroup in the initial group.
+        blocks (tuple): The blocks of the chosen subgroup in the initial group.
+        comps (tuple): The components of the relation graph for the relation encoded in `matrix`.
+        verbose_comps (tuple): The same as `comps` but the elements of each entry are group elements rather than indices.
     """
 
     def __init__(self, group, subgroup, chirality):
@@ -33,9 +34,10 @@ class GroupQuoitent:
         self.group = group
         self.elems = tuple(self.group)
         self.subgroup = group.subgroups()[subgroup]
-        self.cosets = self.group.cosets(self.subgroup, chirality)
-        self.comps = Graph(self.matrix()).connected_components()
-        self.verbose_comps = [[self.elems[i] for i in comp] for comp in self.comps]
+        self.cosets = tuple(self.group.cosets(self.subgroup, chirality))
+        self.blocks = tuple(self.blocks())
+        self.comps = tuple(Graph(self.matrix()).connected_components())
+        self.verbose_comps = tuple([self.elems[i] for i in comp] for comp in self.comps)
 
     def blocks(self):
         """
@@ -70,12 +72,11 @@ class GroupQuoitent:
             sage.matrix.matrix_integer_sparse.Matrix_integer_sparse: A matrix encoding the relation.
         """
 
-        blocks = tuple(self.blocks())
-        k = len(blocks)
+        k = len(self.blocks)
         m = matrix(k,sparse=True)
         for i in range(k):
             for j in range(i,k):
-                if len(set(blocks[i]).intersection(set(blocks[j]))) > 0:
+                if frozenset(self.blocks[i]).intersection(frozenset(self.blocks[j])) is not frozenset([]):
                     m[i,j]=1
                     m[j,i]=1
         return m
@@ -85,15 +86,16 @@ class GroupQuoitent:
         Generate the indices assigned to those blocks which are related to the identity block, even indirectly.
 
         Yields:
-            The index of another new block related to the identity block.
+            int: The index of another new block related to the identity block.
         """
 
         m = self.block_matrix()
         related_blocks = []
         new_blocks = [0]
+        yield 0
         while new_blocks != []:
             for i in new_blocks:
-                for j in range(len(m)):
+                for j in range(m.dimensions()[0]):
                     if m[i,j] == 1 and (j not in related_blocks and j not in new_blocks):
                         new_blocks.append(j)
                         yield j
@@ -121,15 +123,12 @@ class GroupQuoitent:
         Generate the relation graph corresponding to the block relation matrix for those blocks related to the identity block,
         even indirectly.
 
-        ## Fix this
+        Args:
+            name (str): The name of the output file, optionally with extension.
+            layout_choice (str): The layout algorthm used to draw the graph.
         """
 
-        # the igraph stuff has spotty support right now, couln't get it installed
-        # look into GraphData
-        # blocks = self.identity_related_blocks
-        # labels = [str(self.blocks_gens()[i][0])+","+str(self.blocks_gens()[i][1]) for i in blocks]
-        g = Graph(self.identity_block_matrix)
-        # g.igraph_graph({'name': labels})
+        g = Graph(self.identity_block_matrix())
         g.remove_loops()
         g.plot(graph_border=True, layout=layout_choice).save(filename=name)
 
@@ -175,6 +174,7 @@ class GroupQuoitent:
         for coset in self.cosets:
             for i in range(len(self.cosets[0])):
                 elems.append(coset[i])
+        elems = tuple(elems)
         for x in elems:
             row = []
             for y in elems:
@@ -186,7 +186,7 @@ class GroupQuoitent:
         Print the multiplication table for the quotient, up to isomorphism.
         """
 
-        s = [set(comp) for comp in self.verbose_comps]
+        s = tuple(set(comp) for comp in self.verbose_comps)
         for a in s:
             row = []
             for b in s:
@@ -196,6 +196,69 @@ class GroupQuoitent:
                         lis.append(alpha*beta)
                 row.append(s.index(set(lis)))
             print(row)
+
+    def detailed_multiplication_table(self, file_name='mult_table.tex'):
+        """
+        Write the LaTeX source for a table showing multiplication in the nonnormal quotient and the corresponding closure.
+
+        Args:
+            file_name (str): The name of the file to be generated.
+        """
+
+        size = self.group.order()
+        sorted_elems = []
+        norm_closure = normal_closure(self.group, self.group.subgroups().index(self.subgroup), output='group')
+        closure_cosets = tuple(self.group.cosets(norm_closure))
+        cosets = self.group.cosets(self.subgroup)
+        m = len(closure_cosets[0])
+        n = len(cosets[0])
+        for closure_coset in closure_cosets:
+            for coset in cosets:
+                intersection = frozenset(closure_coset).intersection(frozenset(coset))
+                if intersection != frozenset():
+                    sorted_elems.append(tuple(intersection))
+        file = open(file_name, 'w')
+        file.write('\\documentclass{{article}}')
+        file.write('\\usepackage[a0paper]{{geometry}}\n')
+        file.write('\\usepackage{{multirow}}\n\n')
+        file.write('\\begin{{document}}')
+        file.write('\\begin{{tabular}}{{*{{3}}{{r}} | *{{{}}}{{c}}}}\n'.format(size))
+        # normal closure cosets
+        file.write('& \ & & ')
+        s = len(closure_cosets[0])
+        for closure_coset in closure_cosets[:-1]:
+            file.write('\multicolumn{{{}}}{{c|}}{{${}N(H)$}} & '.format(s,closure_coset[0]))
+        file.write('\multicolumn{{{}}}{{c|}}{{${}N(H)$}} '.format(s,closure_cosets[-1][0]))
+        file.write('\\\\ \\cline{{4-{}}}\n'.format(size+3))
+        # nonnormal subgroup cosets
+        file.write('& & & ')
+        t = len(cosets[0])
+        for coset in cosets[:-1]:
+            file.write('\multicolumn{{{}}}{{c}}{{${}H$}} & '.format(t,coset[0]))
+        file.write('\multicolumn{{{}}}{{c}}{{${}H$}} '.format(t,cosets[-1][0]))
+        file.write('\\\\ \\cline{{4-{}}}\n'.format(size+3))
+        # elements row
+        file.write('& & & ')
+        for i in range(size-1):
+            file.write('${}$ & '.format(self.cosets[i/n][i%n]))
+        file.write('${}$ '.format(self.cosets[-1][-1]))
+        file.write('\\\\ \\hline\n')
+        # table values
+        for i in range(size):
+            if i % m == 0:
+                file.write('\multirow{{{}}}{{*}}{{${}N(H)$}} & '.format(s,closure_cosets[i/m][0]))
+            else:
+                file.write('& ')
+            if i % n == 0:
+                file.write('\multirow{{{}}}{{*}}{{${}H$}} & '.format(t,cosets[i/n][0]))
+            else:
+                file.write('& ')
+            file.write('${}$ & '.format(self.cosets[i/n][i%n]))
+            for j in range(size-1):
+                file.write('${}$ & '.format(self.cosets[i/n][i%n]*self.cosets[j/n][j%n]))
+            file.write('${}$ \\\\\n'.format(self.cosets[i/n][i%n]*self.cosets[-1][-1]))
+        file.write('\end{tabular}\n')
+        file.write('\end{document}')
 
 def subgroup_data(group):
     """
@@ -219,7 +282,7 @@ def subgroup_data(group):
     for i in range(len(group.subgroups())):
         subgrp = group.subgroups()[i]
         for chirality in ['left', 'right']:
-            q = GroupQuoitent(group, i, chirality)
+            q = GroupQuotient(group, i, chirality)
             dic = {}
             dic['subgroup number'] = i
             dic['subgroup generators'] = subgrp.gens()
@@ -229,34 +292,35 @@ def subgroup_data(group):
             lis.append(dic)
     return lis
 
-def generate_subgroup_table(group, file_name):
+def generate_subgroup_table(group, file_name='subg_table.tex'):
     """
     Write the LaTeX source for a table detailing the information in the subgroup_data dictionary.
 
     Args:
         group (sage.groups.perm_gps): The group in question.
-    
-    # Fix linebreaks here
+        file_name (str): The name of the file to be generated.
     """
 
     lis = subgroup_data(group)
     file = open(file_name, 'w')
-    file.write('\\begin{tabular}{r | *{4}{c|}}')
-    file.write('subgroup # & generators & normal? & quotient chirality & quotient order \\\\ \\hline')
+    file.write('\\begin{tabular}{r | *{4}{c|}}\n')
+    file.write('subgroup # & generators & normal? & quotient chirality & quotient order \\\\ \\hline\n')
     for dic in lis:
-        file.write('{} & {} & {} & {} & {} \\\\ \\cline{{2-5}}'.format(dic['subgroup number'],dic['subgroup generators'],dic['subgroup normal'],dic['quotient group chirality'],dic['quotient group order']))
+        file.write('{} & {} & {} & {} & {} \\\\ \\cline{{2-5}}\n'.format(dic['subgroup number'],dic['subgroup generators'],dic['subgroup normal'],dic['quotient group chirality'],dic['quotient group order']))
     file.write('\end{tabular}')
 
-def normal_closure(group, subgrp_num):
+def normal_closure(group, subgrp_num, output='set'):
     """
-    Return a list of the elements in the normal closure of the given subgroup.
+    Return the normal closure of the given subgroup.
 
     Args:
         group (sage.groups.perm_gps): The group in question.
         subgrou_num (int): The place the subgroup has in the ordering SageMath assigns to the subgroups of the given group.
+        output (str): Returns a set if set to 'set' and returns a subgroup of `group` if set to 'group'.
 
     Returns:
-        dict of 
+        set: The elements in the normal closure.
+        sage.groups.perm_gps: The normal closure as a subgroup of `group`.
     """
 
     subgrp = frozenset(group.subgroups()[subgrp_num])
@@ -264,28 +328,113 @@ def normal_closure(group, subgrp_num):
     for i in range(len(list(group.normal_subgroups()))):
         if subgrp.intersection(frozenset(group.normal_subgroups()[i])) == subgrp:
             if closure == set():
-                closure = set(list(group.frozensetnormal_subgroups()[i]))
+                closure = set(list(group.normal_subgroups()[i]))
             else:
                 closure = closure.intersection(set(group.normal_subgroups()[i]))
-    return closure
+    if output == 'set':
+        return closure
+    if output == 'group':
+        for subg in group.subgroups():
+            if set(subg) == closure:
+                return subg
 
 def normal_closure_test(group):
     """
     Check whether the set of elements related, even indirectly, to the identity in the given group under the relation induced by
-    taking a quotient is always the normal closure of the subgroup for which the quotient is being taken.  If not, return the 
+    taking a quotient is always the normal closure of the subgroup for which the quotient is being taken. If not, return the 
     elements of the subgroup for which this condition fails to hold.
 
-    This should always return "Test passed".
+    This should always print 'Test passed'.
 
     Args:
         group: A permutation group.
+
+    Returns:
+        list: The elements of the subgroup for which the test fails.
     """
 
     for subgrp_num in range(len(group.subgroups())):
         subgroup = group.subgroups()[subgrp_num]
         if subgroup.is_normal() == False:
-            if set(GroupQuoitent(group, subgrp_num, 'left').verbose_comps[0]) != normal_closure(group, subgrp_num):
+            if set(GroupQuotient(group, subgrp_num, 'left').verbose_comps[0]) != normal_closure(group, subgrp_num):
                 return(list(group.subgroups()[subgrp_num]))
-            if set(GroupQuoitent(group, subgrp_num, 'right').verbose_comps[0]) != normal_closure(group, subgrp_num):
+            if set(GroupQuotient(group, subgrp_num, 'right').verbose_comps[0]) != normal_closure(group, subgrp_num):
                 return(list(group.subgroups()[subgrp_num]))
     print("Test passed.")
+
+def relation_matrix_transitivity_test(mat):
+    """
+    Check whether a square matrix encodes a transitive relation.
+
+    Args:
+        mat (matrix): The matrix in question.
+
+    Returns:
+        tuple of int: A triple (i,j,k) that witnesses the failure of `mat` to be transitive.
+    """
+
+    size = mat.dimensions()[0]
+    for i in range(size):
+        for j in range(i,size):
+            for k in range(j,size):
+                if mat[i][j] == mat[j][k] == 1 and mat[i][k] == 0:
+                    return((i,j,k))
+
+def block_transitivity_test(group):
+    """
+    Test every subgroup of a given group for a transitive block relation.
+
+    Args:
+        group (sage.groups.perm_gps): The group in question.
+    """
+
+    for subgroup_num in range(len(group.subgroups())):
+        quot = GroupQuotient(group,subgroup_num,'left')
+        mat = quot.block_matrix()
+        tup = relation_matrix_transitivity_test(mat)
+        if tup is not None:
+            i,j,k = tup[0],tup[1],tup[2]
+            print(subgroup_num)
+            print(quot.subgroup)
+            print([quot.blocks[i],quot.blocks[j],quot.blocks[k]])
+            return
+    print("No counterexample found.")
+
+def identity_block_transitivity_test(group):
+    """
+    Test whether the restriction of the block relation to those blocks related, even indirectly, to the identity block is transitive.
+
+    Args:
+        group (sage.groups.perm_gps): The group in question.
+    """
+
+    for subgroup_num in range(len(group.subgroups())):
+        quot = GroupQuotient(group,subgroup_num,'left')
+        mat = quot.identity_block_matrix()
+        tup = relation_matrix_transitivity_test(mat)
+        if tup is not None:
+            i,j,k = tup[0],tup[1],tup[2]
+            print(subgroup_num)
+            print(quot.subgroup)
+            return
+    print("No counterexample found.")
+
+def transitivity_test(group):
+    """
+    For each subgroup of the given group test whether the relation on group elements induced by the corresponding blocks is transitive.
+
+    Args:
+        group (sage.groups.perm_gps): The group in question.
+    """
+
+    for subgroup_num in range(len(group.subgroups())):
+        quot = GroupQuotient(group,subgroup_num,'left')
+        mat = quot.matrix()
+        tup = relation_matrix_transitivity_test(mat)
+        if tup is not None:
+            i,j,k = tup[0],tup[1],tup[2]
+            print(subgroup_num)
+            print(quot.subgroup)
+            print([quot.elems[i],quot.elems[j],quot.elems[k]])
+            return
+    print("No counterexample found.")

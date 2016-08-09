@@ -1,5 +1,5 @@
 import sage.all
-from nonnormal_quotient import GroupQuoitent
+from nonnormal_quotient import GroupQuotient
 from sage.graphs.graph import Graph
 from sage.groups.perm_gps.permgroup_named import AlternatingGroup
 
@@ -23,20 +23,21 @@ print("")
 
 chir = 'left'
 print("We now construct the {} quotient group.".format(chir))
-a = GroupQuoitent(grp, subg, chir)
+a = GroupQuotient(grp, subg, chir)
 print("Below we list the elements of the chosen subgroup, which is {}.".format(a.subgroup))
 print(list(a.subgroup))
 print("")
 
 print("We create a matrix encoding which blocks indirectly related to the identity block are related to each other.")
-mat = a.identity_block_matrix
+mat = a.identity_block_matrix()
 for i in mat:
     print(i)
 print("")
 
 print("We list the elements of each block with that block's position in the entries of the above matrix.")
-for i in range(len(a.identity_related_blocks)):
-    print([i, a.blocks[a.identity_related_blocks[i]]])
+tup = tuple(a.identity_related_blocks())
+for i in range(len(tup)):
+    print([i, a.blocks[tup[i]]])
 print("")
 
 print("We produce the graph which has our matrix as its adjacency matrix.")
