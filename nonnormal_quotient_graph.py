@@ -1,3 +1,9 @@
+"""
+Nonnormal quotient graph example
+
+Charlotte Aten (caten2@u.rochester.edu) 2016
+"""
+
 import sage.all
 from nonnormal_quotient import GroupQuotient
 from sage.graphs.graph import Graph
