@@ -9,9 +9,9 @@ from sage.groups.perm_gps.permgroup_named import SymmetricGroup
 from nonnormal_quotient import GroupQuotient, tex_subgroup_table
 
 print('Let `g` be the symmetric group on 4 elements.')
-g = SymmetricGroup(5)
+g = SymmetricGroup(4)
 print('Generate LaTeX source for a table showing information about the subgroups of g.')
-#tex_subgroup_table(g)
+tex_subgroup_table(g)
 print('')
 
 print('Take the left-handed quotient by subgroup 1, which is not normal in g.')
@@ -21,7 +21,7 @@ print(k.verbose_components)
 print('')
 
 print('Save the relation graph as a png image file called \'relation_graph.png\'.')
-k.generate_relation_graph('relation_graph.png')
+k.draw_relation_graph('relation_graph.png')
 print('')
 
 print('Display the multiplication table for this quotient.')

@@ -118,9 +118,9 @@ class GroupQuotient:
                 a[b.index(i),b.index(j)] = m[i,j]
         return a
 
-    def generate_identity_block_relation_graph(self, name, layout_choice='spring'):
+    def draw_identity_block_relation_graph(self, name='identity_block_relation_graph.png', layout_choice='spring'):
         """
-        Generate the relation graph corresponding to the block relation create_relation_matrix for those blocks related to the identity block,
+        Draw the relation graph corresponding to the block relation create_relation_matrix for those blocks related to the identity block,
         even indirectly.
 
         Args:
@@ -152,9 +152,9 @@ class GroupQuotient:
                         m[self.elements.index(a),self.elements.index(b)]=1
         return m
 
-    def generate_relation_graph(self, name, layout_choice='spring'):
+    def draw_relation_graph(self, name, layout_choice='spring'):
         """
-        Generate the relation graph corresponding to the relation create_relation_matrix on the elements of the group.
+        Draw the relation graph corresponding to the relation create_relation_matrix on the elements of the group.
 
         Args:
             name (str): The name of the output file.
@@ -333,8 +333,7 @@ def tex_subgroup_table(group, file_name='subgroup_table.tex'):
 
     lis = compute_subgroup_data(group)
     file = open(file_name, 'w')
-    file.write('\\documentclass{article}\n')
-    file.write('\\usepackage[a0paper]{geometry}\n')
+    file.write('\\documentclass{standalone}\n\n')
     file.write('\\begin{document}\n')
     file.write('\\begin{tabular}{r | *{3}{c|} c}\n')
     file.write('subgroup number & generators & normal & quotient chirality & quotient order \\\\ \\hline\n')
