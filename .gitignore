@@ -1,3 +1,8 @@
 *.pyc
 *.png
 *.tex
+.directory
+*.aux
+*.log
+*.pdf
+*.synctex.gz
