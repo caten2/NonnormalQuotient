@@ -17,6 +17,7 @@ class GroupQuotient:
         group (sage.groups.perm_gps): The initial group used in the construction.
         elements (frozenset): The elements of the initial group.
         subgroup (sage.groups.perm_gps): The chosen subgroup of the initial group.
+        chirality (str): Either 'left' or 'right' for the left or right cosets of that subgroup, respectively.
         cosets (tuple): The cosets of the chosen subgroup in the initial group.
         blocks (tuple): The blocks of the chosen subgroup in the initial group.
         components (tuple): The components of the relation graph for the relation encoded in ``self.create_relation_matrix()``.
@@ -34,7 +35,8 @@ class GroupQuotient:
         self.group = group
         self.elements = tuple(self.group)
         self.subgroup = group.subgroups()[subgroup]
-        self.cosets = tuple(self.group.cosets(self.subgroup, chirality))
+        self.chirality = chirality
+        self.cosets = tuple(self.group.cosets(self.subgroup,chirality))
         self.blocks = tuple(self.generate_blocks())
         self.components = tuple(Graph(self.create_relation_matrix()).connected_components())
         self.verbose_components = tuple([self.elements[i] for i in comp] for comp in self.components)
@@ -209,7 +211,7 @@ class GroupQuotient:
         sorted_elems = []
         norm_closure = find_normal_closure(self.group,self.group.subgroups().index(self.subgroup),output='group')
         closure_cosets = tuple(self.group.cosets(norm_closure))
-        cosets = self.group.cosets(self.subgroup)
+        cosets = self.group.cosets(self.subgroup,self.chirality)
         m = len(closure_cosets[0])
         n = len(cosets[0])
         for closure_coset in closure_cosets:
