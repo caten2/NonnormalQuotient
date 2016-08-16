@@ -8,4 +8,9 @@
 *.synctex.gz
 *.svg
 *.dvi
+*.ps
+*.nav
+*.out
+*.snm
+*.toc
 test.py
