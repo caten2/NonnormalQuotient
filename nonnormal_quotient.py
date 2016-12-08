@@ -78,7 +78,7 @@ class GroupQuotient:
         m = matrix(k,sparse=True)
         for i in range(k):
             for j in range(i,k):
-                if frozenset(self.blocks[i]).intersection(frozenset(self.blocks[j])) is not frozenset():
+                if set(self.blocks[i]).intersection(set(self.blocks[j])) != set():
                     m[i,j]=1
                     m[j,i]=1
         return m
@@ -164,6 +164,19 @@ class GroupQuotient:
         """
 
         g = Graph(self.create_relation_matrix())
+        g.remove_loops()
+        g.plot(graph_border=False, layout=layout_choice).save(filename=name)
+
+    def draw_block_relation_graph(self, name, layout_choice='spring'):
+        """
+        Draw the relation graph corresponding to the relation create_block_matrix on the elements of the group.
+
+        Args:
+            name (str): The name of the output file.
+            layout_choice (str): The layout format for the graph.
+        """
+
+        g = Graph(self.create_block_matrix())
         g.remove_loops()
         g.plot(graph_border=False, layout=layout_choice).save(filename=name)
 

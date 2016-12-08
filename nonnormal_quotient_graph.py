@@ -19,7 +19,7 @@ for i in range(len(lis)):
     print([i,len(lis[i])])
 print('')
 
-subg = 51
+subg = 53
 print('In this case, we choose subgroup {}.'.format(subg))
 if grp.subgroups()[subg].is_normal() is True:
     print('This subgroup is normal in {}.'.format(grp))
